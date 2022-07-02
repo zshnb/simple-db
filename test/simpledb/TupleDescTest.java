@@ -173,6 +173,11 @@ public class TupleDescTest extends SimpleDbTestBase {
         assertEquals(intString2, intString);
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void failedConstructTypeNameLengthNotSame() {
+        TupleDesc singleInt = new TupleDesc(new Type[]{Type.INT_TYPE}, new String[]{"", ""});
+    }
+
     /**
      * JUnit suite target
      */
