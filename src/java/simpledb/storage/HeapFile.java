@@ -142,16 +142,16 @@ class HeapFileIterator extends AbstractDbFileIterator {
         if (iterator == null) {
             return null;
         }
-        if (iterator.hasNext()) {
-            return iterator.next();
-        }
-        pageNumber += 1;
-        page = (HeapPage) Database.getBufferPool().getPage(tid, new HeapPageId(tableId, pageNumber), null);
-        if (page != null) {
+        if (!iterator.hasNext()) {
+            pageNumber += 1;
+            page = (HeapPage) Database.getBufferPool().getPage(tid, new HeapPageId(tableId, pageNumber), null);
             iterator = page.iterator();
             if (iterator.hasNext()) {
                 return iterator.next();
             }
+        }
+        if (iterator.hasNext()) {
+            return iterator.next();
         }
         return null;
     }
