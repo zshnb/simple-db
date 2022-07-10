@@ -1,5 +1,6 @@
 package simpledb.storage;
 
+import simpledb.common.Database;
 import simpledb.common.DbException;
 import simpledb.common.Permissions;
 import simpledb.transaction.TransactionAbortedException;
@@ -7,7 +8,7 @@ import simpledb.transaction.TransactionId;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * BufferPool manages the reading and writing of pages into memory from
@@ -26,7 +27,8 @@ public class BufferPool {
 
     private static int pageSize = DEFAULT_PAGE_SIZE;
 
-    private List<Page> pages;
+    private ConcurrentHashMap<PageId, Page> idWithPage;
+
     /** Default number of pages passed to the constructor. This is used by
     other classes. BufferPool should use the numPages argument to the
     constructor instead. */
@@ -38,7 +40,7 @@ public class BufferPool {
      * @param numPages maximum number of pages in this buffer pool.
      */
     public BufferPool(int numPages) {
-        pages = new ArrayList<>(numPages);
+        idWithPage = new ConcurrentHashMap<>(numPages);
     }
     
     public static int getPageSize() {
@@ -72,7 +74,13 @@ public class BufferPool {
      */
     public  Page getPage(TransactionId tid, PageId pid, Permissions perm)
         throws TransactionAbortedException, DbException {
-        return pages.stream().filter(it -> it.getId().equals(pid)).findFirst().get();
+        int tableId = pid.getTableId();
+        if (!idWithPage.containsKey(pid)) {
+            Page page = Database.getCatalog().getDatabaseFile(tableId).readPage(pid);
+            idWithPage.put(pid, page);
+            return page;
+        }
+        return idWithPage.get(pid);
     }
 
     /**
