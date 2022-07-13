@@ -164,7 +164,7 @@ class HeapFileIterator extends AbstractDbFileIterator {
 
     @Override
     public void rewind() throws DbException, TransactionAbortedException {
-        page = (HeapPage) Database.getBufferPool().getPage(tid, new HeapPageId(tableId, pageNumber), null);
+//        page = (HeapPage) Database.getBufferPool().getPage(tid, new HeapPageId(tableId, pageNumber), null);
         iterator = page.iterator();
     }
 

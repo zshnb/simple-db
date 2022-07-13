@@ -8,6 +8,7 @@ import junit.framework.JUnit4TestAdapter;
 import org.junit.Before;
 import org.junit.Test;
 
+import simpledb.common.DbException;
 import simpledb.common.Utility;
 import simpledb.execution.Filter;
 import simpledb.execution.OpIterator;
@@ -15,6 +16,7 @@ import simpledb.execution.Predicate;
 import simpledb.storage.Tuple;
 import simpledb.storage.TupleDesc;
 import simpledb.systemtest.SimpleDbTestBase;
+import simpledb.transaction.TransactionAbortedException;
 
 public class FilterTest extends SimpleDbTestBase {
 

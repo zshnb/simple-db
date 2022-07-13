@@ -4,7 +4,6 @@
 
 **Due: Wed, Mar 10 11:59 PM EDT**
 
-
 <!--
 **Bug Update:** We have a [page](bugs.html) to keep track
 of SimpleDB bugs that you or we find. Fixes for bugs/annoyances will also be
@@ -265,13 +264,11 @@ Before beginning to write code, we **strongly encourage** you to read through th
 high-level design of SimpleDB.
 
 <p>
-
 You will need to fill in any piece of code that is not implemented. It will be obvious where we think you should write
 code. You may need to add private methods and/or helper classes. You may change APIs, but make sure
 our [grading](#grading) tests still run and make sure to mention, explain, and defend your decisions in your writeup.
 
 <p>
-
 In addition to the methods that you need to fill out for this lab, the class interfaces contain numerous methods that
 you need not implement until subsequent labs. These will either be indicated per class:
 
@@ -380,7 +377,6 @@ file as you will need to access these objects.
 
 ***
 
-
 At this point, your code should pass the unit tests TupleTest and TupleDescTest. At this point, modifyRecordId() should
 fail because you havn't implemented it yet.
 
@@ -402,14 +398,13 @@ using `Database.getBufferPool()`).
 
 * src/java/simpledb/common/Catalog.java
 
-*** 
+***
 
 At this point, your code should pass the unit tests in CatalogTest.
 
 ### 2.4. BufferPool
 
 <p>The buffer pool (class `BufferPool` in SimpleDB) is responsible for caching pages in memory that have been recently read from disk. All operators read and write pages from various files on disk through the buffer pool. It consists of a fixed number of pages, defined by the `numPages` parameter to the `BufferPool` constructor. In later labs, you will implement an eviction policy. For this lab, you only need to implement the constructor and the `BufferPool.getPage()` method used by the SeqScan operator. The BufferPool should store up to `numPages` pages. For this lab, if more than `numPages` requests are made for different pages, then instead of implementing an eviction policy, you may throw a DbException. In future labs you will be required to implement an eviction policy.
-
 The `Database` class provides a static method, `Database.getBufferPool()`, that returns a reference to the single
 BufferPool instance for the entire SimpleDB process.
 
@@ -435,7 +430,6 @@ policy is up to you; it is not necessary to do something sophisticated.
 
 <!--
 <p>
-
 Notice that `BufferPool` asks you to implement
 a `flush_all_pages()` method.  This is not something you would ever
 need in a real implementation of a buffer pool.  However, we need this method
@@ -450,7 +444,6 @@ include heap files (unsorted files of tuples) and B-trees; for this assignment, 
 access method, and we have written some of the code for you.
 
 <p>
-
 A `HeapFile` object is arranged into a set of pages, each of which consists of a fixed number of bytes for storing
 tuples, (defined by the constant `BufferPool.DEFAULT_PAGE_SIZE`), including a header. In SimpleDB, there is
 one `HeapFile` object for each table in the database. Each page in a `HeapFile` is arranged as a set of slots, each of
@@ -460,7 +453,7 @@ tuple is 1, it indicates that the tuple is valid; if it is 0, the tuple is inval
 initialized.)  Pages of `HeapFile` objects are of type `HeapPage` which implements the `Page` interface. Pages are
 stored in the buffer pool but are read and written by the `HeapFile` class.
 
-<p>
+<p>一个HeapFile对应一张表，HeapFile里存有HeapPage的集合，每个Page有一个bitmap的header,用于表示对应位有无tuple
 
 SimpleDB stores heap files on disk in more or less the same format they are stored in memory. Each file consists of page
 data arranged consecutively on disk. Each page consists of one or more bytes representing the header, followed by the _
@@ -468,13 +461,11 @@ page size_ bytes of actual page content. Each tuple requires _tuple size_ * 8 bi
 header. Thus, the number of tuples that can fit in a single page is:
 
 <p>
-
 `
-_tuples per page_ = floor((_page size_ * 8) / (_tuple size_ * 8 + 1))
+_tuples per page_ = floor((_page size_ * 8) / (_tuple size_ * 8 + 1)) //单位bit
 `
 
 <p>
-
 Where _tuple size_ is the size of a tuple in the page in bytes. The idea here is that each tuple requires one additional
 bit of storage in the header. We compute the number of bits in a page (by mulitplying page size by 8), and divide this
 quantity by the number of bits in a tuple (including this extra header bit) to get the number of tuples per page. The
@@ -516,7 +507,6 @@ are [big-endian](http://en.wikipedia.org/wiki/Endianness).
 
 ***
 
-
 Although you will not use them directly in Lab 1, we ask you to implement <tt>getNumEmptySlots()</tt> and <tt>
 isSlotUsed()</tt> in HeapPage. These require pushing around bits in the page header. You may find it helpful to look at
 the other methods that have been provided in HeapPage or in <tt>src/simpledb/HeapFileEncoder.java</tt> to understand the
@@ -542,7 +532,7 @@ disk.
 
 * src/java/simpledb/storage/HeapFile.java
 
-*** 
+***
 
 To read a page from disk, you will first need to calculate the correct offset in the file. Hint: you will need random
 access to the file in order to read and write pages at arbitrary offsets. You should not call BufferPool methods when
@@ -574,7 +564,6 @@ pass them up the tree (as return arguments to `getNext`); tuples propagate up th
 at the root or combined or rejected by another operator in the plan.
 
 <p>
-
 <!--
 For plans that implement `INSERT` and `DELETE` queries,
 the top-most operator is a special `Insert` or `Delete`
