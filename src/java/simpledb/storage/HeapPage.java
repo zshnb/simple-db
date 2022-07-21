@@ -23,6 +23,8 @@ public class HeapPage implements Page {
 	final byte[] header;
 	final Tuple[] tuples;
 	final int numSlots;
+	private int lastIndex;
+	private TransactionId transactionId;
 
 	byte[] oldData;
 	private final Byte oldDataLock = (byte) 0;
@@ -48,6 +50,7 @@ public class HeapPage implements Page {
 		this.pid = id;
 		this.td = Database.getCatalog().getTupleDesc(id.getTableId());
 		this.numSlots = getNumTuples();
+		lastIndex = 0;
 		DataInputStream dis = new DataInputStream(new ByteArrayInputStream(data));
 
 		// allocate and read the header slots of this page
@@ -58,13 +61,16 @@ public class HeapPage implements Page {
 		tuples = new Tuple[numSlots];
 		try {
 			// allocate and read the actual records of this page
-			for (int i = 0; i < tuples.length; i++)
+			for (int i = 0; i < tuples.length; i++) {
 				tuples[i] = readNextTuple(dis, i);
+				if (tuples[i] != null) {
+					lastIndex += 1;
+				}
+			}
 		} catch (NoSuchElementException e) {
 			e.printStackTrace();
 		}
 		dis.close();
-
 		setBeforeImage();
 	}
 
@@ -244,8 +250,52 @@ public class HeapPage implements Page {
 	 *                     already empty.
 	 */
 	public void deleteTuple(Tuple t) throws DbException {
-		// some code goes here
-		// not necessary for lab1
+		RecordId recordId = t.getRecordId();
+		if (!isSlotUsed(recordId.getTupleNumber())) {
+			throw new DbException(String.format("tuple with no: %d doesn't exist on page: %d", recordId.getTupleNumber(), recordId.getPageId().getPageNumber()));
+		}
+		Tuple tuple = tuples[recordId.getTupleNumber()];
+		if (tuple.equals(t)) {
+			tuples[recordId.getTupleNumber()] = null;
+		} else {
+			throw new DbException(String.format("tuple with no: %d doesn't exist on page: %d", recordId.getTupleNumber(), recordId.getPageId().getPageNumber()));
+		}
+		byte b = header[recordId.getTupleNumber() / 8];
+		switch (recordId.getTupleNumber() % 8) {
+			case 0: {
+				b &= 0b11111110;
+				break;
+			}
+			case 1: {
+				b &= 0b11111101;
+				break;
+			}
+			case 2: {
+				b &= 0b11111011;
+				break;
+			}
+			case 3: {
+				b &= 0b11110111;
+				break;
+			}
+			case 4: {
+				b &= 0b11101111;
+				break;
+			}
+			case 5: {
+				b &= 0b11011111;
+				break;
+			}
+			case 6: {
+				b &= 0b10111111;
+				break;
+			}
+			case 7: {
+				b &= 0b01111111;
+				break;
+			}
+		}
+		header[recordId.getTupleNumber() / 8] = b;
 	}
 
 	/**
@@ -257,8 +307,13 @@ public class HeapPage implements Page {
 	 *                     is mismatch.
 	 */
 	public void insertTuple(Tuple t) throws DbException {
-		// some code goes here
-		// not necessary for lab1
+		if (getNumEmptySlots() == 0) {
+			throw new DbException("page is full, can't add new tuple");
+		}
+		t.setRecordId(new RecordId(pid, lastIndex));
+		tuples[lastIndex] = t;
+		markSlotUsed(lastIndex, true);
+		lastIndex += 1;
 	}
 
 	/**
@@ -266,17 +321,18 @@ public class HeapPage implements Page {
 	 * that did the dirtying
 	 */
 	public void markDirty(boolean dirty, TransactionId tid) {
-		// some code goes here
-		// not necessary for lab1
+		if (dirty) {
+			transactionId = tid;
+		} else {
+			transactionId = null;
+		}
 	}
 
 	/**
 	 * Returns the tid of the transaction that last dirtied this page, or null if the page is not dirty
 	 */
 	public TransactionId isDirty() {
-		// some code goes here
-		// Not necessary for lab1
-		return null;
+		return transactionId;
 	}
 
 	/**
@@ -324,8 +380,42 @@ public class HeapPage implements Page {
 	 * Abstraction to fill or clear a slot on this page.
 	 */
 	private void markSlotUsed(int i, boolean value) {
-		// some code goes here
-		// not necessary for lab1
+		byte b = header[i / 8];
+		switch (i % 8) {
+			case 0: {
+				b |= 0b00000001;
+				break;
+			}
+			case 1: {
+				b |= 0b00000010;
+				break;
+			}
+			case 2: {
+				b |= 0b00000100;
+				break;
+			}
+			case 3: {
+				b |= 0b00001000;
+				break;
+			}
+			case 4: {
+				b |= 0b00010000;
+				break;
+			}
+			case 5: {
+				b |= 0b00100000;
+				break;
+			}
+			case 6: {
+				b |= 0b01000000;
+				break;
+			}
+			case 7: {
+				b |= 0b10000000;
+				break;
+			}
+		}
+		header[i / 8] = b;
 	}
 
 	/**
