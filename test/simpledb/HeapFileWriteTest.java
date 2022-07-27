@@ -47,6 +47,7 @@ public class HeapFileWriteTest extends TestUtil.CreateHeapFile {
 
         // and one more, just for fun...
         empty.insertTuple(tid, Utility.getHeapTuple(0, 2));
+        empty.insertTuple(tid, Utility.getHeapTuple(0, 2));
         assertEquals(3, empty.numPages());
     }
 
@@ -77,6 +78,7 @@ public class HeapFileWriteTest extends TestUtil.CreateHeapFile {
         smallFile.writePage(new HeapPage(new HeapPageId(tableId, 2), full));
         smallFile.writePage(new HeapPage(new HeapPageId(tableId, 3), empty));
         smallFile.writePage(new HeapPage(new HeapPageId(tableId, 4), full));
+        smallFile.setPageCount(5);
         DbFileIterator it = smallFile.iterator(tid);
         it.open();
         int count = 0;

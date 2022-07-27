@@ -26,6 +26,8 @@ import java.util.Random;
 public class HeapFile implements DbFile {
 	private File file;
 	private TupleDesc tupleDesc;
+	// 页数
+	private int pageCount;
 	private int id;
 
 	/**
@@ -35,9 +37,14 @@ public class HeapFile implements DbFile {
 	 *          file.
 	 */
 	public HeapFile(File f, TupleDesc td) {
+		pageCount = 1;
 		this.file = f;
 		this.tupleDesc = td;
 		this.id = new Random().nextInt();
+	}
+
+	public void setPageCount(int pageCount) {
+		this.pageCount = pageCount;
 	}
 
 	/**
@@ -89,15 +96,18 @@ public class HeapFile implements DbFile {
 
 	// see DbFile.java for javadocs
 	public void writePage(Page page) throws IOException {
-		// some code goes here
-		// not necessary for lab1
+		PageId pageId = page.getId();
+		int offset = pageId.getPageNumber() * BufferPool.getPageSize();
+		RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw");
+		randomAccessFile.seek(offset);
+		randomAccessFile.write(page.getPageData());
 	}
 
 	/**
 	 * Returns the number of pages in this HeapFile.
 	 */
 	public int numPages() {
-		return (int) (file.length() / BufferPool.getPageSize());
+		return pageCount;
 	}
 
 	// see DbFile.java for javadocs
@@ -105,21 +115,14 @@ public class HeapFile implements DbFile {
 	 * 找到有空余位置的page（如果没有创建一页），插入tuple
 	 * */
 	public List<Page> insertTuple(TransactionId tid, Tuple t) throws DbException, IOException, TransactionAbortedException {
-		int pageNumber = 0;
-		Page page;
-		while (true) {
-			HeapPageId heapPageId = new HeapPageId(id, pageNumber);
-			page = Database.getBufferPool().getPage(tid, heapPageId, null);
-			if (page == null) {
-				page = new HeapPage(heapPageId, new byte[BufferPool.getPageSize()]);
-				break;
-			}
-			if (((HeapPage) page).getNumEmptySlots() != 0) {
-				break;
-			}
-			pageNumber += 1;
+		HeapPageId heapPageId = new HeapPageId(id, pageCount - 1);
+		Page page = Database.getBufferPool().getPage(tid, heapPageId, null);
+		if (page == null || ((HeapPage) page).getNumEmptySlots() == 0) {
+			page = new HeapPage(new HeapPageId(id, pageCount), new byte[BufferPool.getPageSize()]);
+			pageCount += 1;
 		}
 		((HeapPage) page).insertTuple(t);
+		writePage(page);
 		return List.of(page);
 	}
 
@@ -140,9 +143,15 @@ public class HeapFile implements DbFile {
 					heapPage.deleteTuple(t);
 					heapPage.markDirty(true, tid);
 					pages.add(heapPage);
+					if (heapPage.getNumEmptySlots() == heapPage.numSlots) {
+						pageCount -= 1;
+					}
+					writePage(heapPage);
 					break;
 				} catch (DbException e) {
 					pageNumber += 1;
+				} catch (IOException e) {
+					throw new DbException("write page error");
 				}
 			}
 		}
@@ -151,22 +160,22 @@ public class HeapFile implements DbFile {
 
 	// see DbFile.java for javadocs
 	public DbFileIterator iterator(TransactionId tid) {
-		return new HeapFileIterator(tid, numPages(), id);
+		return new HeapFileIterator(tid, id, pageCount);
 	}
 }
 
 class HeapFileIterator extends AbstractDbFileIterator {
 	private Iterator<Tuple> iterator;
 	private HeapPage page;
-	private int numPages;
 	private int pageNumber;
+	private int pageCount;
 	private TransactionId tid;
 	private int tableId;
 
-	public HeapFileIterator(TransactionId tid, int numPages, int tableId) {
+	public HeapFileIterator(TransactionId tid, int tableId, int pageCount) {
 		this.tid = tid;
-		this.numPages = numPages;
 		this.tableId = tableId;
+		this.pageCount = pageCount;
 		pageNumber = 0;
 	}
 
@@ -175,13 +184,10 @@ class HeapFileIterator extends AbstractDbFileIterator {
 		if (iterator == null) {
 			return null;
 		}
-		if (!iterator.hasNext()) {
+		while (pageNumber < pageCount && !iterator.hasNext()) {
 			pageNumber += 1;
 			page = (HeapPage) Database.getBufferPool().getPage(tid, new HeapPageId(tableId, pageNumber), null);
 			iterator = page.iterator();
-			if (iterator.hasNext()) {
-				return iterator.next();
-			}
 		}
 		if (iterator.hasNext()) {
 			return iterator.next();

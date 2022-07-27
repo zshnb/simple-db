@@ -296,6 +296,7 @@ public class HeapPage implements Page {
 			}
 		}
 		header[recordId.getTupleNumber() / 8] = b;
+		lastIndex -= 1;
 	}
 
 	/**
@@ -339,21 +340,22 @@ public class HeapPage implements Page {
 	 * Returns the number of empty slots on this page.
 	 */
 	public int getNumEmptySlots() {
-		int sum = 0;
-		for (byte b : header) {
-			// 0b11111111 = -1，即全部占用
-			if (b == 0) {
-				sum += 8;
-			} else if (b != -1) {
-				String bitStr = byteToBit(b);
-				for (char c : bitStr.toCharArray()) {
-					if (c == '0') {
-						sum += 1;
-					}
-				}
-			}
-		}
-		return sum;
+		return tuples.length - lastIndex;
+//		int sum = 0;
+//		for (byte b : header) {
+//			// 0b11111111 = -1，即全部占用
+//			if (b == 0) {
+//				sum += 8;
+//			} else if (b != -1) {
+//				String bitStr = byteToBit(b);
+//				for (char c : bitStr.toCharArray()) {
+//					if (c == '0') {
+//						sum += 1;
+//					}
+//				}
+//			}
+//		}
+//		return sum;
 	}
 
 	/**

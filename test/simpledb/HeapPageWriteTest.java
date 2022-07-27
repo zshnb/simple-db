@@ -84,6 +84,7 @@ public class HeapPageWriteTest extends SimpleDbTestBase {
         // now, the page should be full.
         try {
             page.insertTuple(Utility.getHeapTuple(0, 2));
+            assertEquals(page.getNumEmptySlots(), 0);
             throw new Exception("page should be full; expected DbException");
         } catch (DbException e) {
             // explicitly ignored
