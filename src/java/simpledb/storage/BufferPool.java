@@ -7,7 +7,7 @@ import simpledb.transaction.TransactionAbortedException;
 import simpledb.transaction.TransactionId;
 
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -30,6 +30,7 @@ public class BufferPool {
 	private static int pageSize = DEFAULT_PAGE_SIZE;
 
 	private ConcurrentHashMap<PageId, Page> idWithPage;
+	private Deque<PageId> pageIds;
 	private int numPages;
 
 	/**
@@ -47,6 +48,7 @@ public class BufferPool {
 	public BufferPool(int numPages) {
 		this.numPages = numPages;
 		idWithPage = new ConcurrentHashMap<>(numPages);
+		pageIds = new ArrayDeque<>();
 	}
 
 	public static int getPageSize() {
@@ -83,9 +85,16 @@ public class BufferPool {
 		int tableId = pid.getTableId();
 		if (!idWithPage.containsKey(pid)) {
 			Page page = Database.getCatalog().getDatabaseFile(tableId).readPage(pid);
+			if (idWithPage.size() > DEFAULT_PAGES) {
+				PageId lastUsedPageId = pageIds.removeLast();
+				discardPage(lastUsedPageId);
+			}
 			idWithPage.put(pid, page);
+			pageIds.addFirst(pid);
 			return page;
 		}
+		pageIds.remove(pid);
+		pageIds.addFirst(pid);
 		return idWithPage.get(pid);
 	}
 
@@ -180,8 +189,13 @@ public class BufferPool {
 	 * break simpledb if running in NO STEAL mode.
 	 */
 	public synchronized void flushAllPages() throws IOException {
-		// some code goes here
-		// not necessary for lab1
+		Iterator<Integer> tableIdIterator = Database.getCatalog().tableIdIterator();
+		while (tableIdIterator.hasNext()) {
+			int tableId = tableIdIterator.next();
+			DbFile dbFile = Database.getCatalog().getDatabaseFile(tableId);
+
+//			dbFile.readPage()
+		}
 
 	}
 
@@ -195,8 +209,7 @@ public class BufferPool {
 	 * are removed from the cache so they can be reused safely
 	 */
 	public synchronized void discardPage(PageId pid) {
-		// some code goes here
-		// not necessary for lab1
+		idWithPage.remove(pid);
 	}
 
 	/**
